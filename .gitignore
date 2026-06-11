@@ -1,0 +1,48 @@
+# Go
+backend/server
+backend/server.exe
+backend/dishes-menu
+backend/dishes-menu.exe
+backend/*.test
+backend/coverage.out
+backend/vendor/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/dev-dist/
+frontend/.vite/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/.env
+frontend/.env.local
+
+# Go-embedded web bundle (built by `npm run build` in frontend/, copied to backend/web/dist)
+backend/web/dist/
+
+# Env
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Local AI memory (assistant state, not project code)
+.remember/

@@ -1,0 +1,15 @@
+# Caddy reverse proxy for dishes-menu
+#
+# Run:
+#   docker run -d --name caddy \
+#     -p 80:80 -p 443:443 \
+#     -v ./nginx/Caddyfile:/etc/caddy/Caddyfile \
+#     -v caddy_data:/data \
+#     -v caddy_config:/config \
+#     caddy:2
+
+# Replace with your actual domain
+dishes.your-domain.com {
+    encode zstd gzip
+    reverse_proxy localhost:8080
+}
