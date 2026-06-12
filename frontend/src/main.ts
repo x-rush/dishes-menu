@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
+import './styles/fonts.css'
 import './styles/main.css'
 import { registerSW } from 'virtual:pwa-register'
 

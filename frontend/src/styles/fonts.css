@@ -1,0 +1,32 @@
+/* 本地自托管字体,零外链,适配国内网络环境 */
+/* font-display: swap 避免 FOIT(文字不可见),先 fallback 渲染再加载 */
+
+@font-face {
+  font-family: 'ZCOOL KuaiLe';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/forxt/dishes-menu/fonts/ZCOOLKuaiLe-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/forxt/dishes-menu/fonts/Nunito-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/forxt/dishes-menu/fonts/Nunito-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/forxt/dishes-menu/fonts/Nunito-700.woff2') format('woff2');
+}

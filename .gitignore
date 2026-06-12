@@ -46,3 +46,6 @@ logs/
 
 # Local AI memory (assistant state, not project code)
 .remember/
+
+# Local deploy script (per-machine SSH key / paths, never commit)
+deploy.sh

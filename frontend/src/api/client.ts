@@ -1,6 +1,7 @@
 import type { Dish, WeekMenu, Slot, Day, MenuItem } from '../types'
 
-const BASE = '' // same-origin in prod; Vite proxy in dev
+// 同一个 BASE 兼容 dev / prod:dev 模式 BASE_URL = '/' → 走 Vite proxy 到 :8080;prod 模式 BASE_URL = '/forxt/dishes-menu/' → 拼到所有 /api/... 前面
+const BASE = import.meta.env.DEV ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')
 
 export class APIError extends Error {
   constructor(public code: string, message: string, public status: number) {
