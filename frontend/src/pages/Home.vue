@@ -13,6 +13,7 @@ import { slotsForDay, ALL_DAYS, DAY_LABELS, type Day, type Slot, type Dish } fro
 import { isoWeekKey, dateToDayKey, dayToDate, formatDateString, parseDateString } from '../utils/isoWeek'
 import { useSwipeDay } from '../composables/useSwipeDay'
 import { useUndo } from '../composables/useUndo'
+import { usePullToRefresh } from '../composables/usePullToRefresh'
 import SkeletonCard from '../components/SkeletonCard.vue'
 import ConfettiBurst from '../components/ConfettiBurst.vue'
 
@@ -95,6 +96,12 @@ function gotoPrevDay() {
 }
 useSwipeDay(homeRef, { onNext: gotoNextDay, onPrev: gotoPrevDay })
 
+// 下拉刷新:刷新数据 + 跳回今天
+const { pulling, pullDistance, refreshing: pullRefreshing } = usePullToRefresh({
+  target: homeRef,
+  onRefresh: refreshAndGoToday,
+})
+
 const pickerTarget = ref<{ day: Day; slot: Slot } | null>(null)
 function openPicker(day: Day, slot: Slot) {
   pickerTarget.value = { day, slot }
@@ -106,7 +113,12 @@ function closePicker() {
 const slots = computed(() => slotsForDay(day.value))
 
 const dayLabel = computed(() => `${DAY_LABELS[day.value]}`)
-const weekLabel = computed(() => week.value)
+// 显示成正常日期 + 后面括号注 ISO 周次,例如 "2026-06-12 (第24周)"
+const weekLabel = computed(() => {
+  const wk = week.value  // "2026-W24"
+  const weekNum = wk.split('-W')[1]
+  return `${date.value} (第${weekNum}周)`
+})
 
 const greeting = computed(() => {
   const h = new Date().getHours()
@@ -129,6 +141,18 @@ async function refresh() {
     setTimeout(() => { reloadHint.value = null }, 1500)
   } catch {
     reloadHint.value = null
+  }
+}
+
+/** 下拉刷新专用:刷新数据 + 跳回今天(用 replace 不污染 history) */
+async function refreshAndGoToday() {
+  await refresh()
+  const today = formatDateString(new Date())
+  const todayWeek = isoWeekKey()
+  if (date.value !== today) {
+    // router.push 留 history(用户能后退),replace 不留 ——
+    // 选 replace:从其他周/其他日"回家"不应该让用户能再 back 出去
+    router.replace(`/${todayWeek}/${today}`)
   }
 }
 
@@ -186,6 +210,17 @@ onMounted(async () => {
 
 <template>
   <div ref="homeRef" class="home">
+    <!-- 下拉刷新指示器:平时隐藏,下拉时随手指下移,松手回弹 -->
+    <div
+      class="pull-indicator"
+      :class="{ active: pulling, refreshing: pullRefreshing }"
+      :style="{ transform: `translateY(${pullDistance - 56}px)` }"
+      aria-hidden="true"
+    >
+      <span class="pull-icon">⟳</span>
+      <span class="pull-text">{{ pullRefreshing ? '回到今天…' : '下拉回到今天' }}</span>
+    </div>
+
     <header class="hero">
       <div class="hero-left">
         <Mascot :size="72" class="hero-mascot" />
@@ -255,6 +290,46 @@ onMounted(async () => {
   margin: 0 auto;
   padding-bottom: 96px;
   position: relative;
+}
+
+.pull-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  pointer-events: none;
+  /* 默认藏在 hero 上方(threshold=70,容器高 40,下拉 56px 时刚好露出) */
+  transform: translateY(-56px);
+  transition: transform 0.32s var(--ease-spring);
+  z-index: 1;
+}
+.pull-indicator.active {
+  /* 跟随手指时关闭过渡,直接跟手 */
+  transition: none;
+}
+.pull-indicator.refreshing .pull-icon {
+  animation: pull-spin 0.8s linear infinite;
+}
+.pull-icon {
+  display: inline-block;
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.2s var(--ease-spring);
+}
+.pull-indicator.active .pull-icon {
+  transform: rotate(180deg);
+}
+@keyframes pull-spin {
+  to { transform: rotate(360deg); }
 }
 
 .hero {
