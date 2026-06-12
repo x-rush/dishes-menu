@@ -43,13 +43,17 @@ function onPick() {
   if (props.dish) emit('pick', props.dish)
 }
 
+function onBackdropClick(e: MouseEvent) {
+  if (e.target === dialogRef.value) close()
+}
+
 function onImageError() {
   imageFailed.value = true
 }
 </script>
 
 <template>
-  <dialog ref="dialogRef" @close="close">
+  <dialog ref="dialogRef" @click="onBackdropClick" @close="close">
     <div v-if="dish" class="dlg-body">
       <header class="dlg-header">
         <h3>{{ dish.name }}</h3>

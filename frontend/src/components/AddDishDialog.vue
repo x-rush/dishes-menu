@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue'
 import { useDishesStore } from '../stores/dishes'
-import { ALL_SLOTS, SLOT_LABELS, type Slot } from '../types'
+import { ALL_SLOTS, SLOT_LABELS, type Slot, type Dish } from '../types'
 
 const dishes = useDishesStore()
 
 const props = defineProps<{ open: boolean }>()
-const emit = defineEmits<{ close: [], saved: [] }>()
+const emit = defineEmits<{ close: [], saved: [], created: [dish: Dish] }>()
 
 const dialogRef = ref<HTMLDialogElement | null>(null)
 
@@ -86,6 +86,11 @@ function onClose() {
   emit('close')
 }
 
+/** 点击 native dialog 的 ::backdrop 关闭(浏览器不自动支持) */
+function onBackdropClick(e: MouseEvent) {
+  if (e.target === dialogRef.value) close()
+}
+
 async function submit() {
   if (submitting.value) return
   if (!form.name.trim()) {
@@ -103,7 +108,7 @@ async function submit() {
   submitting.value = true
   error.value = null
   try {
-    await dishes.create({
+    const created = await dishes.create({
       name: form.name.trim(),
       slots: form.slots,
       ingredients: form.ingredients.filter((x) => x.trim()),
@@ -112,6 +117,7 @@ async function submit() {
       image: form.image.trim() || undefined,
     })
     emit('saved')
+    emit('created', created)
     close()
   } catch (e) {
     error.value = e instanceof Error ? e.message : '保存失败'
@@ -135,7 +141,7 @@ watch(
 </script>
 
 <template>
-  <dialog ref="dialogRef" @close="onClose">
+  <dialog ref="dialogRef" @click="onBackdropClick" @close="onClose">
     <div class="dlg-body">
       <header class="dlg-header">
         <h3>添加菜品</h3>

@@ -55,6 +55,9 @@
   /* 默认 body 用细体系统字;装饰元素再用 var(--font-display-cn) 显式覆盖 */
   --font-stack: var(--font-cn-system), var(--font-en-system), Arial, sans-serif;
   --font-display: var(--font-display-cn), var(--font-display-en), var(--font-cn-system);
+
+  /* 告诉浏览器原生 UI 用什么方案:滚动条、表单、autofill */
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -79,6 +82,35 @@
     --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
   }
+}
+
+/* 手动暗色覆盖:`useDark` 把 data-theme 写到 <html> 上,无论系统偏好都强制暗色 */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-warm-bg:  #241b1f;
+  --color-cream:    #2d2226;
+  --color-ink:      #f4e9ec;
+  --color-muted:    #b6a3ad;
+  --color-line:     #4a3a42;
+  --color-line-2:   #5a4750;
+  --color-pink-50:  #3a2830;
+  --color-pink-100: #4a3540;
+  --color-pink-200: #6b4a5a;
+  --color-pink-400: #f8a5c2;
+  --color-pink-500: #ffb0ce;
+  --color-peach-100: #4a3a30;
+  --color-peach-200: #6b4a38;
+  --color-butter-100: #4a4028;
+  --color-butter-200: #6b5f3a;
+  --color-mint-200: #2e4a3a;
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+/* 手动亮色:跟默认 :root 一致,但写出来以防系统是暗色时也强制亮色 */
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 * {

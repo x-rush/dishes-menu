@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useMenuStore } from '../stores/menu'
 import { useDishesStore } from '../stores/dishes'
 import SlotBowl from './illustrations/SlotBowl.vue'
 import EmptyPlate from './illustrations/EmptyPlate.vue'
 import DishDetailDialog from './DishDetailDialog.vue'
 import { SLOT_LABELS, type Day, type Slot, type MenuItem } from '../types'
+import { useLongPress } from '../composables/useLongPress'
+import { useUndo } from '../composables/useUndo'
 
 const props = defineProps<{
   week: string
@@ -20,8 +22,11 @@ const emit = defineEmits<{
 
 const menu = useMenuStore()
 const dishes = useDishesStore()
+const undo = useUndo()
 
+const cardRef = ref<HTMLElement | null>(null)
 const shuffling = ref(false)
+const latestSeq = ref<number | null>(null)  // 最新加入的 item.seq,用于触发 flip-in 动画
 const noteOpen = ref(false)
 const noteText = ref('')
 const noteTargetSeq = ref<number | null>(null)
@@ -46,7 +51,24 @@ async function onShuffle() {
   shuffling.value = true
   error.value = null
   try {
-    await menu.shuffleDish(props.week, props.day, props.slot)
+    const newDish = await menu.shuffleDish(props.week, props.day, props.slot)
+    // 找到刚加入的 item 的 seq
+    const items = menu.weekMenus[props.week]?.[props.day]?.[props.slot] ?? []
+    const added = items[items.length - 1]
+    if (added) {
+      latestSeq.value = added.seq
+      // 动画 1.2s 后清掉
+      const seqSnapshot = added.seq
+      setTimeout(() => {
+        if (latestSeq.value === seqSnapshot) latestSeq.value = null
+      }, 1200)
+    }
+    undo.push(`已加入 ${newDish.name}`, async () => {
+      // 撤销:删掉 slot 最后一条
+      const cur = menu.weekMenus[props.week]?.[props.day]?.[props.slot] ?? []
+      const last = cur[cur.length - 1]
+      if (last) await menu.removeItem(props.week, props.day, props.slot, last.seq)
+    })
   } catch (e) {
     error.value = e instanceof Error ? e.message : '换一换失败'
   } finally {
@@ -72,13 +94,17 @@ function openNote(item: MenuItem) {
   noteTargetSeq.value = item.seq
   noteText.value = item.note ?? ''
   noteOpen.value = true
-  noteDialogRef.value?.showModal()
+  nextTick(() => noteDialogRef.value?.showModal())
 }
 
 function closeNote() {
   noteOpen.value = false
   noteDialogRef.value?.close()
   noteTargetSeq.value = null
+}
+
+function onNoteBackdropClick(e: MouseEvent) {
+  if (e.target === noteDialogRef.value) closeNote()
 }
 
 async function saveNote() {
@@ -97,12 +123,20 @@ async function saveNote() {
 }
 
 async function removeItem(item: MenuItem) {
+  const captured = { dish_id: item.dish_id, note: item.note ?? '' }
+  const dishName = getDish(item)?.name ?? '菜品'
   await menu.removeItem(props.week, props.day, props.slot, item.seq)
+  undo.push(`已删除 ${dishName}`, async () => {
+    await menu.appendItem(props.week, props.day, props.slot, captured.dish_id, captured.note)
+  })
 }
+
+// 长按 = 换一换(vibrate 50ms 由 useLongPress 内部处理)
+useLongPress(cardRef, { onLong: onShuffle })
 </script>
 
 <template>
-  <article class="dish-card card" :class="{ empty: isEmpty }">
+  <article ref="cardRef" class="dish-card card" :class="{ empty: isEmpty }">
     <header class="head">
       <div class="slot-line">
         <SlotBowl :slot="slot" :size="32" class="slot-icon" />
@@ -130,7 +164,7 @@ async function removeItem(item: MenuItem) {
         <div
           v-for="(item, idx) in items"
           :key="`${item.dish_id}-${item.seq}-${idx}`"
-          class="item-row"
+          :class="['item-row', { 'is-new': item.seq === latestSeq }]"
         >
           <button
             type="button"
@@ -170,7 +204,7 @@ async function removeItem(item: MenuItem) {
       </button>
     </div>
 
-    <dialog ref="noteDialogRef" @close="noteOpen = false">
+    <dialog ref="noteDialogRef" @click="onNoteBackdropClick" @close="noteOpen = false">
       <div class="dlg-body">
         <header class="dlg-header">
           <h3>本次备注</h3>
@@ -207,6 +241,7 @@ async function removeItem(item: MenuItem) {
   position: relative;
   overflow: hidden;
   animation: fadeUp 0.5s var(--ease-out-soft) var(--enter-delay, 0ms) backwards;
+  touch-action: pan-y;  /* 允许垂直滚动,水平留给 useSwipe */
 }
 .dish-card::before {
   content: "";
@@ -271,6 +306,15 @@ async function removeItem(item: MenuItem) {
   flex-direction: column;
   gap: 6px;
   padding: 6px 0;
+}
+/* shuffle 加入新菜时的翻牌动画 */
+.item-row.is-new {
+  animation: flip-in 0.5s var(--ease-spring);
+}
+@keyframes flip-in {
+  0%   { transform: scale(0.85) rotateX(-22deg); opacity: 0; }
+  60%  { transform: scale(1.04) rotateX(4deg); opacity: 1; }
+  100% { transform: scale(1) rotateX(0); }
 }
 .item-sep {
   border: none;
@@ -337,6 +381,7 @@ async function removeItem(item: MenuItem) {
   border-radius: var(--radius-sm);
   border-left: 3px solid var(--color-pink-200);
   word-break: break-word;
+  white-space: pre-wrap;
 }
 .slot-note {
   background: var(--color-pink-50);

@@ -8,8 +8,10 @@ const menu = useMenuStore()
 const { currentDay } = storeToRefs(menu)
 const scrollerRef = ref<HTMLElement | null>(null)
 
+const emit = defineEmits<{ changeDay: [day: Day] }>()
+
 function pick(day: Day) {
-  menu.setDay(day)
+  emit('changeDay', day)
 }
 
 async function scrollToActive() {

@@ -80,15 +80,35 @@ func serveStatic(r *gin.Engine, webFS fs.FS) {
 			serveIndex(c, webFS)
 			return
 		}
-		if _, err := fs.Stat(webFS, p); err == nil {
-			if hasExt(p) {
-				c.Header("Content-Type", mime.TypeByExtension(path.Ext(p)))
-				fileServer.ServeHTTP(c.Writer, c.Request)
-				return
-			}
+		// Vite base = /forxt/dishes-menu/ 时,index.html 引用的资源路径是
+		// /forxt/dishes-menu/assets/...。但 webFS 嵌入的是 dist/ root(没有
+		// sub-path 前缀)。生产 nginx 会把 /forxt/dishes-menu/ strip 后再 proxy,
+		// 所以后端看到的是 /assets/...;但裸 :8080(本地 dev / 容器直连)看到
+		// 的是完整 /forxt/dishes-menu/assets/...。两种都剥掉 sub-path 前缀后
+		// 再查 webFS,命中就 serve。
+		fsPath := strings.TrimPrefix(p, "forxt/dishes-menu/")
+		if fsPath == p {
+			// 没匹配上 sub-path prefix,直接用 p
+			fsPath = p
+		}
+		if tryServeAsset(c, fileServer, webFS, fsPath) {
+			return
 		}
 		serveIndex(c, webFS)
 	})
+}
+
+// tryServeAsset 在 webFS 中查 filePath,命中且带扩展名就 serve;否则返回 false 让 caller 走 SPA fallback。
+func tryServeAsset(c *gin.Context, fileServer http.Handler, webFS fs.FS, filePath string) bool {
+	if _, err := fs.Stat(webFS, filePath); err == nil {
+		if hasExt(filePath) {
+			c.Header("Content-Type", mime.TypeByExtension(path.Ext(filePath)))
+			c.Request.URL.Path = "/" + filePath
+			fileServer.ServeHTTP(c.Writer, c.Request)
+			return true
+		}
+	}
+	return false
 }
 
 func serveIndex(c *gin.Context, webFS fs.FS) {

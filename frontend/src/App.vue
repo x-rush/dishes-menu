@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import Home from './pages/Home.vue'
+import { RouterView } from 'vue-router'
+import UndoToast from './components/UndoToast.vue'
+import ThemeToggle from './components/ThemeToggle.vue'
 </script>
 
 <template>
-  <Home />
+  <RouterView />
+  <ThemeToggle />
+  <UndoToast />
 </template>
 
 <style>
