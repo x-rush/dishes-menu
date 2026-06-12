@@ -147,7 +147,7 @@ function onImageError() {
 }
 .meta-time {
   background: var(--color-butter-100);
-  color: #6b5a1f;
+  color: var(--color-on-butter);
   padding: 4px 12px;
   border-radius: var(--radius-pill);
   font-weight: 600;

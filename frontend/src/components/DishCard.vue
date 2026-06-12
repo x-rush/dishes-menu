@@ -255,7 +255,7 @@ useLongPress(cardRef, { onLong: onShuffle })
   opacity: 0.5;
 }
 .dish-card:hover { box-shadow: var(--shadow-md); }
-.dish-card.empty { background: var(--color-pink-50); }
+.dish-card.empty { background: var(--color-pink-100); }
 .dish-card.empty::before { background: linear-gradient(180deg, var(--color-butter-200), var(--color-butter-300)); opacity: 0.7; }
 
 .head {

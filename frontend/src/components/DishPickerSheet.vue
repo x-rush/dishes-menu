@@ -508,7 +508,7 @@ function onTouchMove(e: TouchEvent) {
 }
 .used-badge {
   background: var(--color-butter-200);
-  color: #6b5a1f;
+  color: var(--color-on-butter);
 }
 
 .slot-tag {

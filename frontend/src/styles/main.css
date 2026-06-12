@@ -15,6 +15,8 @@
   --color-butter-100: #fff4d4;
   --color-butter-200: #ffe799;
   --color-butter-300: #f7d560;
+  /* 文字落在 butter 背景上的前景色:亮模式用深棕,暗模式用浅黄 */
+  --color-on-butter: #6b5a1f;
 
   --color-mint-200: #bce6cf;
   --color-mint-300: #7dd3a3;
@@ -78,6 +80,7 @@
     --color-butter-100: #4a4028;
     --color-butter-200: #6b5f3a;
     --color-mint-200: #2e4a3a;
+    --color-on-butter: #fff5d6;  /* 暗色:浅黄字落在深橄榄底上 */
     --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
     --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
@@ -103,6 +106,7 @@
   --color-butter-100: #4a4028;
   --color-butter-200: #6b5f3a;
   --color-mint-200: #2e4a3a;
+  --color-on-butter: #fff5d6;
   --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
@@ -222,11 +226,11 @@ p {
   background: var(--color-pink-50);
   color: var(--color-pink-500);
 }
-.btn-ghost:hover { background: var(--color-pink-100); }
+.btn-ghost:hover { background: var(--color-pink-200); }
 
 .btn-butter {
   background: var(--color-butter-200);
-  color: #6b5a1f;
+  color: var(--color-on-butter);
 }
 .btn-butter:hover { background: var(--color-butter-300); }
 
