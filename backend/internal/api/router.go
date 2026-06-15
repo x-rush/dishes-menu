@@ -15,19 +15,25 @@ import (
 )
 
 type Handlers struct {
-	Health *HealthHandler
-	Dish   *DishHandler
-	Menu   *MenuHandler
+	Health   *HealthHandler
+	Dish     *DishHandler
+	Menu     *MenuHandler
+	Todo     *TodoHandler
+	Together *TogetherHandler
 }
 
 func NewHandlers(db *sqlx.DB) *Handlers {
 	dishRepo := dao.NewDishRepo(db)
 	menuRepo := dao.NewMenuRepo(db)
+	todoRepo := dao.NewTodoDAO(db)
+	counterRepo := dao.NewCounterDAO(db)
 	shuffle := service.NewShuffleService(dishRepo, menuRepo)
 	return &Handlers{
-		Health: NewHealthHandler(db),
-		Dish:   NewDishHandler(dishRepo),
-		Menu:   NewMenuHandler(menuRepo, dishRepo, shuffle),
+		Health:   NewHealthHandler(db),
+		Dish:     NewDishHandler(dishRepo),
+		Menu:     NewMenuHandler(menuRepo, dishRepo, shuffle),
+		Todo:     NewTodoHandler(todoRepo),
+		Together: NewTogetherHandler(counterRepo),
 	}
 }
 
@@ -50,6 +56,16 @@ func RegisterRoutes(r *gin.Engine, h *Handlers, webFS fs.FS) {
 		api.PUT("/menu/:day/:slot/:seq", h.Menu.UpdateItemNote)
 		api.DELETE("/menu/:day/:slot/:seq", h.Menu.DeleteItem)
 		api.GET("/menu/shuffle", h.Menu.Shuffle)
+
+		// ── Todos ──
+		api.GET("/todos", h.Todo.List)
+		api.POST("/todos", h.Todo.Create)
+		api.PATCH("/todos/:id", h.Todo.Patch)
+		api.DELETE("/todos/:id", h.Todo.Delete)
+
+		// ── Together counter ──
+		api.GET("/together", h.Together.Get)
+		api.POST("/together", h.Together.Set)
 	}
 
 	if webFS != nil {
