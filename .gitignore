@@ -49,3 +49,4 @@ logs/
 
 # Local deploy script (per-machine SSH key / paths, never commit)
 deploy.sh
+.worktrees/
