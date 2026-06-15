@@ -62,3 +62,18 @@ export function slotsForDay(day: Day): Slot[] {
     ? ['breakfast', 'lunch', 'dinner']
     : ['breakfast', 'snack']
 }
+
+export interface Todo {
+  id: number
+  content: string
+  due_date: string | null  // YYYY-MM-DD 或 null
+  author_emoji: string
+  author_color: string
+  created_at: string        // ISO 8601
+  completed_at: string | null
+}
+
+export interface Together {
+  together_since: string | null  // YYYY-MM-DD 或 null
+  days: number
+}
