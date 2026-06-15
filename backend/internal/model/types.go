@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -171,4 +172,38 @@ var AllDays = []string{DayMon, DayTue, DayWed, DayThu, DayFri, DaySat, DaySun}
 func ISOWeekKey(t time.Time) string {
 	y, w := t.ISOWeek()
 	return fmt.Sprintf("%d-W%02d", y, w)
+}
+
+// Todo mirrors the todos table. Used directly by sqlx (db tags) — no DAO row type by design
+// (Todo has no JSON/joined columns). MarshalJSON formats DueDate as YYYY-MM-DD.
+type Todo struct {
+	ID          int64      `db:"id" json:"id"`
+	Content     string     `db:"content" json:"content"`
+	DueDate     *time.Time `db:"due_date" json:"due_date,omitempty"`
+	AuthorEmoji string     `db:"author_emoji" json:"author_emoji"`
+	AuthorColor string     `db:"author_color" json:"author_color"`
+	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
+	CompletedAt *time.Time `db:"completed_at" json:"completed_at,omitempty"`
+}
+
+// MarshalJSON renders DueDate as "YYYY-MM-DD" so the FE's formatDue (which
+// does d.slice(5)) renders correctly. Other fields use default encoding.
+func (t Todo) MarshalJSON() ([]byte, error) {
+	type alias Todo
+	aux := struct {
+		DueDate *string `json:"due_date"`
+		*alias
+	}{
+		alias: (*alias)(&t),
+	}
+	if t.DueDate != nil {
+		s := t.DueDate.Format("2006-01-02")
+		aux.DueDate = &s
+	}
+	return json.Marshal(aux)
+}
+
+type Counter struct {
+	Name  string `db:"name" json:"name"`
+	Value string `db:"value" json:"value"`
 }
