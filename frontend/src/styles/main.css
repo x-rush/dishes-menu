@@ -356,3 +356,14 @@ dialog::backdrop {
   color: var(--color-muted);
   font-size: 14px;
 }
+
+/* 底部 TabBar 留白 */
+.app-shell { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+
+/* 浮动心形按钮的层级 */
+.heart-fab-wrap { z-index: 30; }
+
+/* 中央浮起按钮让底部 nav 不被挡 */
+@media (max-width: 480px) {
+  .tab-spacer { flex-basis: 100px; }
+}
