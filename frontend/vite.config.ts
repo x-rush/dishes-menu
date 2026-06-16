@@ -56,6 +56,24 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: { '/api': { target: 'http://localhost:8080', changeOrigin: true } },
     },
+    css: {
+      postcss: {
+        plugins: [
+          {
+            postcssPlugin: 'replace-base-url',
+            Once(root) {
+              root.walkAtRules('font-face', (rule) => {
+                rule.walkDecls('src', (decl) => {
+                  if (typeof decl.value === 'string') {
+                    decl.value = decl.value.replace(/%BASE_URL%/g, BASE_NORMALIZED)
+                  }
+                })
+              })
+            },
+          },
+        ],
+      },
+    },
     build: {
       outDir: '../backend/web/dist',
       emptyOutDir: true,
