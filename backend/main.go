@@ -4,7 +4,6 @@ import (
 	"context"
 	"embed"
 	"errors"
-	"fmt"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -15,19 +14,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-migrate/migrate/v4"
-	mysqlmigrate "github.com/golang-migrate/migrate/v4/database/mysql"
-	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 
 	"dishes-menu/internal/api"
-	"dishes-menu/internal/dao"
 	"dishes-menu/internal/db"
 )
-
-//go:embed all:migrations
-var migrationsFS embed.FS
 
 //go:embed all:web/dist
 var webDistFS embed.FS
@@ -62,21 +53,6 @@ func main() {
 	}
 	defer mysqlDB.Close()
 	logger.Info("connected to mysql")
-
-	if err := runMigrations(mysqlDB); err != nil {
-		logger.Error("run migrations", "err", err)
-		os.Exit(1)
-	}
-	logger.Info("migrations up-to-date")
-
-	if n, err := seedDishes(ctx, mysqlDB); err != nil {
-		logger.Error("seed dishes", "err", err)
-		os.Exit(1)
-	} else if n > 0 {
-		logger.Info("seeded default dishes", "count", n)
-	} else {
-		logger.Info("dishes table already populated, skip seed")
-	}
 
 	if getenv("GIN_MODE", "") == "release" {
 		gin.SetMode(gin.ReleaseMode)
@@ -115,30 +91,6 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("shutdown", "err", err)
 	}
-}
-
-func runMigrations(mysqlDB *sqlx.DB) error {
-	src, err := iofs.New(migrationsFS, "migrations")
-	if err != nil {
-		return fmt.Errorf("iofs: %w", err)
-	}
-	driver, err := mysqlmigrate.WithInstance(mysqlDB.DB, &mysqlmigrate.Config{})
-	if err != nil {
-		return fmt.Errorf("migrate driver: %w", err)
-	}
-	m, err := migrate.NewWithInstance("iofs", src, "mysql", driver)
-	if err != nil {
-		return fmt.Errorf("migrate instance: %w", err)
-	}
-	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("migrate up: %w", err)
-	}
-	return nil
-}
-
-func seedDishes(ctx context.Context, mysqlDB *sqlx.DB) (int, error) {
-	repo := dao.NewDishRepo(mysqlDB)
-	return repo.SeedDefaultDishes(ctx)
 }
 
 func getenv(k, def string) string {
