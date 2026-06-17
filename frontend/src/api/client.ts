@@ -74,7 +74,7 @@ export const api = {
   listTodos: () => request<Todo[]>('/api/todos'),
   createTodo: (input: { content: string; due_date: string | null; author_emoji: string; author_color: string }) =>
     request<Todo>('/api/todos', { method: 'POST', body: JSON.stringify(input) }),
-  patchTodo: (id: number, body: { content?: string; completed?: boolean }) =>
+  patchTodo: (id: number, body: { content?: string; completed?: boolean; due_date?: string | null }) =>
     request<Todo>(`/api/todos/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteTodo: (id: number) =>
     request<void>(`/api/todos/${id}`, { method: 'DELETE' }),

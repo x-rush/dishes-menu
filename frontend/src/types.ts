@@ -71,6 +71,7 @@ export interface Todo {
   author_color: string
   created_at: string        // ISO 8601
   completed_at: string | null
+  pinned?: boolean          // P1 时永远 falsy(后端尚未支持),P2 后端加列后启用
 }
 
 export interface Together {

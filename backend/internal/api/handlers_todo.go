@@ -1,6 +1,8 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"time"
@@ -25,8 +27,9 @@ type todoCreateReq struct {
 }
 
 type todoPatchReq struct {
-	Content   *string `json:"content"`
-	Completed *bool   `json:"completed"`
+	Content   *string         `json:"content"`
+	Completed *bool           `json:"completed"`
+	DueDate   json.RawMessage `json:"due_date"` // 区分缺失 vs null(清除)
 }
 
 // List GET /api/todos — 列出所有待办(未完成优先 + 截止日期升序)。
@@ -70,8 +73,8 @@ func (h *TodoHandler) Create(c *gin.Context) {
 	c.JSON(201, todo)
 }
 
-// Patch PATCH /api/todos/:id — 支持 {"completed": true/false} 切换完成态,
-// 或 {"content": "..."} 修改文案。同一请求里只生效一个字段。
+// Patch PATCH /api/todos/:id — 支持同时改 content / completed / due_date;至少一个字段。
+// 注意:Completed 互斥(切换语义),不与其他字段共存。
 func (h *TodoHandler) Patch(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -84,6 +87,11 @@ func (h *TodoHandler) Patch(c *gin.Context) {
 		return
 	}
 	if body.Completed != nil {
+		// ToggleComplete 互斥 — 不与 content/due_date 混用
+		if body.Content != nil || len(body.DueDate) > 0 {
+			badRequest(c, "completed 不能与其他字段同时修改")
+			return
+		}
 		todo, err := h.repo.ToggleComplete(c.Request.Context(), id)
 		if err != nil {
 			if errors.Is(err, dao.ErrNotFound) {
@@ -94,6 +102,10 @@ func (h *TodoHandler) Patch(c *gin.Context) {
 			return
 		}
 		c.JSON(200, todo)
+		return
+	}
+	if body.Content == nil && len(body.DueDate) == 0 {
+		badRequest(c, "未指定要更新的字段")
 		return
 	}
 	if body.Content != nil {
@@ -109,15 +121,39 @@ func (h *TodoHandler) Patch(c *gin.Context) {
 			serverErr(c, err)
 			return
 		}
-		todo, err := h.repo.Get(c.Request.Context(), id)
-		if err != nil {
+	}
+	if len(body.DueDate) > 0 {
+		var due *time.Time
+		if !bytes.Equal(body.DueDate, []byte("null")) {
+			var s string
+			if err := json.Unmarshal(body.DueDate, &s); err != nil {
+				badRequest(c, "due_date 格式应为 YYYY-MM-DD 或 null")
+				return
+			}
+			if s != "" {
+				t, err := time.Parse("2006-01-02", s)
+				if err != nil {
+					badRequest(c, "due_date 格式应为 YYYY-MM-DD")
+					return
+				}
+				due = &t
+			}
+		}
+		if err := h.repo.UpdateDueDate(c.Request.Context(), id, due); err != nil {
+			if errors.Is(err, dao.ErrNotFound) {
+				notFound(c, "todo not found")
+				return
+			}
 			serverErr(c, err)
 			return
 		}
-		c.JSON(200, todo)
+	}
+	todo, err := h.repo.Get(c.Request.Context(), id)
+	if err != nil {
+		serverErr(c, err)
 		return
 	}
-	badRequest(c, "未指定要更新的字段")
+	c.JSON(200, todo)
 }
 
 // Delete DELETE /api/todos/:id — 删除一条待办。

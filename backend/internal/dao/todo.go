@@ -91,6 +91,22 @@ func (d *TodoDAO) UpdateContent(ctx context.Context, id int64, content string) e
 	return nil
 }
 
+// UpdateDueDate 改截止日期;传入 nil 表示清除截止日期。
+func (d *TodoDAO) UpdateDueDate(ctx context.Context, id int64, dueDate *time.Time) error {
+	res, err := d.db.ExecContext(ctx, `UPDATE todos SET due_date = ? WHERE id = ?`, dueDate, id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (d *TodoDAO) Delete(ctx context.Context, id int64) error {
 	res, err := d.db.ExecContext(ctx, `DELETE FROM todos WHERE id = ?`, id)
 	if err != nil {

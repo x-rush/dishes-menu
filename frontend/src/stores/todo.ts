@@ -43,10 +43,15 @@ export const useTodoStore = defineStore('todo', () => {
     todos.value = todos.value.map(t => (t.id === id ? updated : t))
   }
 
+  async function updateDueDate(id: number, dueDate: string | null): Promise<void> {
+    const updated = await api.patchTodo(id, { due_date: dueDate })
+    todos.value = todos.value.map(t => (t.id === id ? updated : t))
+  }
+
   async function remove(id: number): Promise<void> {
     await api.deleteTodo(id)
     todos.value = todos.value.filter(t => t.id !== id)
   }
 
-  return { todos, loading, error, open, done, fetchAll, create, toggle, updateContent, remove }
+  return { todos, loading, error, open, done, fetchAll, create, toggle, updateContent, updateDueDate, remove }
 })
