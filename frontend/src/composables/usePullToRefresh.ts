@@ -1,13 +1,18 @@
 // 移动端下拉刷新手势
 // 行为:
-//   - 仅在 scrollTop=0 时响应(否则浏览器的原生滚动应该接管)
+//   - 仅在 window.scrollY=0 时响应(否则浏览器的原生滚动应该接管)
 //   - 向下拉 70px+ 触发 onRefresh,松手时距离回弹到 0
 //   - 阻力系数 0.4,模仿 iOS 的橡皮筋感(下拉 100px 只移动 40px)
 //   - 与现有横向 useSwipeDay 手势无冲突(方向不同)
 import { ref, onMounted, onUnmounted, watch, type Ref } from 'vue'
 
+/** 读当前页面滚动位置 — 不用 target.scrollTop,因为 Home 根 div 不是滚动容器 */
+function getPageScrollTop(): number {
+  return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0
+}
+
 export interface PullToRefreshOptions {
-  /** 监听的滚动容器,通常是 Home.vue 的根元素 */
+  /** 监听的容器元素(Home 根 div),仅作 touch event 监听点;实际滚动位置看 window */
   target: Ref<HTMLElement | null>
   /** 触发刷新时的回调(可异步) */
   onRefresh: () => void | Promise<void>
@@ -32,7 +37,11 @@ export function usePullToRefresh(options: PullToRefreshOptions) {
   function onTouchStart(e: TouchEvent) {
     if (refreshing.value) return
     const el = options.target.value
-    if (!el || el.scrollTop > 0) return
+    if (!el) return
+    // 关键:检查 window 滚动位置,不是 el.scrollTop。
+    // 之前用 el.scrollTop 是 bug — Home 根 div 无 overflow,scrollTop 永远是 0,
+    // 导致页面已滚下去时也能进入手势,反向 swipe 会被误识别为下拉刷新。
+    if (getPageScrollTop() > 0) return
     const t = e.touches[0]
     if (!t) return
     startY = t.clientY

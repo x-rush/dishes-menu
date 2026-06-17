@@ -1,4 +1,4 @@
-import type { Dish, WeekMenu, Slot, Day, MenuItem } from '../types'
+import type { Dish, WeekMenu, Slot, Day, MenuItem, Todo, Together } from '../types'
 
 // 同一个 BASE 兼容 dev / prod:dev 模式 BASE_URL = '/' → 走 Vite proxy 到 :8080;prod 模式 BASE_URL = '/forxt/dishes-menu/' → 拼到所有 /api/... 前面
 const BASE = import.meta.env.DEV ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')
@@ -69,4 +69,18 @@ export const api = {
       `/api/menu/shuffle?${params.toString()}`
     )
   },
+
+  // Todos
+  listTodos: () => request<Todo[]>('/api/todos'),
+  createTodo: (input: { content: string; due_date: string | null; author_emoji: string; author_color: string }) =>
+    request<Todo>('/api/todos', { method: 'POST', body: JSON.stringify(input) }),
+  patchTodo: (id: number, body: { content?: string; completed?: boolean }) =>
+    request<Todo>(`/api/todos/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteTodo: (id: number) =>
+    request<void>(`/api/todos/${id}`, { method: 'DELETE' }),
+
+  // Together counter
+  getTogether: () => request<Together>('/api/together'),
+  setTogether: (date: string) =>
+    request<void>('/api/together', { method: 'POST', body: JSON.stringify({ date }) }),
 }

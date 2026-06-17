@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import TabBar from './components/TabBar.vue'
 import UndoToast from './components/UndoToast.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
 </script>
 
 <template>
-  <RouterView />
-  <ThemeToggle />
-  <UndoToast />
+  <div class="app-shell">
+    <RouterView />
+    <ThemeToggle />
+    <UndoToast />
+    <TabBar />
+  </div>
 </template>
 
 <style>
