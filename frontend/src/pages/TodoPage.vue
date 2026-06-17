@@ -23,13 +23,15 @@ const searchQuery = ref('')
 const filterEmoji = ref<string | null>(null)  // null = 全部提交人
 const filterRange = ref<'all' | 'today' | 'week' | 'month'>('all')
 
-// 候选 emoji:从所有 todo 提取去重
+// 候选 emoji:从所有 todo 提取去重,并统计每个 emoji 的 todo 数量
+// (展示在筛选 popover 的 label 槽位上,比单纯重复 emoji 有用)
 const availableEmojis = computed(() => {
-  const set = new Set<string>()
+  const counts = new Map<string, number>()
   for (const t of store.todos) {
-    if (t.author_emoji) set.add(t.author_emoji)
+    if (!t.author_emoji) continue
+    counts.set(t.author_emoji, (counts.get(t.author_emoji) ?? 0) + 1)
   }
-  return Array.from(set)
+  return Array.from(counts, ([emoji, count]) => ({ emoji, count }))
 })
 
 // Popover 状态
@@ -282,7 +284,7 @@ const allDone = computed(() => activeTab.value === 'open' && openCount.value ===
                   <span class="option-label">全部</span>
                 </button>
                 <button
-                  v-for="e in availableEmojis"
+                  v-for="{ emoji: e, count } in availableEmojis"
                   :key="e"
                   type="button"
                   class="filter-option"
@@ -290,7 +292,7 @@ const allDone = computed(() => activeTab.value === 'open' && openCount.value ===
                   @click="filterEmoji = e; emojiPopoverOpen = false"
                 >
                   <span>{{ e }}</span>
-                  <span class="option-label">{{ e }}</span>
+                  <span class="option-label">{{ count }} 条</span>
                 </button>
               </div>
             </Transition>

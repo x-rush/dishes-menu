@@ -50,3 +50,9 @@ logs/
 # Local deploy script (per-machine SSH key / paths, never commit)
 deploy.sh
 .worktrees/
+
+# MCP / Playwright artifacts (e2e 调试产出,不进版本库)
+.playwright-mcp/
+# Root-level screenshots (E2E 临时抓图)
+/*.png
+
