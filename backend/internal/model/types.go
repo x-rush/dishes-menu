@@ -182,8 +182,19 @@ type Todo struct {
 	DueDate     *time.Time `db:"due_date" json:"due_date,omitempty"`
 	AuthorEmoji string     `db:"author_emoji" json:"author_emoji"`
 	AuthorColor string     `db:"author_color" json:"author_color"`
+	Pinned      bool       `db:"pinned" json:"pinned"`
 	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
 	CompletedAt *time.Time `db:"completed_at" json:"completed_at,omitempty"`
+}
+
+// TodoComment mirrors the todo_comments table.
+type TodoComment struct {
+	ID          int64     `db:"id" json:"id"`
+	TodoID      int64     `db:"todo_id" json:"todo_id"`
+	Content     string    `db:"content" json:"content"`
+	AuthorEmoji string    `db:"author_emoji" json:"author_emoji"`
+	AuthorColor string    `db:"author_color" json:"author_color"`
+	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 }
 
 // MarshalJSON renders DueDate as "YYYY-MM-DD" so the FE's formatDue (which

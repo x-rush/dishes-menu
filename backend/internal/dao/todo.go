@@ -18,9 +18,9 @@ func NewTodoDAO(db *sqlx.DB) *TodoDAO { return &TodoDAO{db: db} }
 func (d *TodoDAO) List(ctx context.Context) ([]model.Todo, error) {
 	var todos []model.Todo
 	err := d.db.SelectContext(ctx, &todos, `
-		SELECT id, content, due_date, author_emoji, author_color, created_at, completed_at
+		SELECT id, content, due_date, author_emoji, author_color, pinned, created_at, completed_at
 		FROM todos
-		ORDER BY (completed_at IS NULL) DESC, due_date IS NULL, due_date, created_at DESC
+		ORDER BY (completed_at IS NULL) DESC, pinned DESC, due_date IS NULL, due_date, created_at DESC
 	`)
 	return todos, err
 }
@@ -43,7 +43,7 @@ func (d *TodoDAO) Create(ctx context.Context, content string, dueDate *time.Time
 func (d *TodoDAO) Get(ctx context.Context, id int64) (model.Todo, error) {
 	var t model.Todo
 	err := d.db.GetContext(ctx, &t, `
-		SELECT id, content, due_date, author_emoji, author_color, created_at, completed_at
+		SELECT id, content, due_date, author_emoji, author_color, pinned, created_at, completed_at
 		FROM todos WHERE id = ?
 	`, id)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -91,6 +91,22 @@ func (d *TodoDAO) UpdateContent(ctx context.Context, id int64, content string) e
 	return nil
 }
 
+// UpdateDueDate 改截止日期;传入 nil 表示清除截止日期。
+func (d *TodoDAO) UpdateDueDate(ctx context.Context, id int64, dueDate *time.Time) error {
+	res, err := d.db.ExecContext(ctx, `UPDATE todos SET due_date = ? WHERE id = ?`, dueDate, id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (d *TodoDAO) Delete(ctx context.Context, id int64) error {
 	res, err := d.db.ExecContext(ctx, `DELETE FROM todos WHERE id = ?`, id)
 	if err != nil {
@@ -104,4 +120,22 @@ func (d *TodoDAO) Delete(ctx context.Context, id int64) error {
 		return ErrNotFound
 	}
 	return nil
+}
+
+// TogglePin 切换置顶状态。返回更新后的 todo。
+func (d *TodoDAO) TogglePin(ctx context.Context, id int64) (model.Todo, error) {
+	res, err := d.db.ExecContext(ctx, `
+		UPDATE todos SET pinned = NOT pinned WHERE id = ?
+	`, id)
+	if err != nil {
+		return model.Todo{}, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return model.Todo{}, err
+	}
+	if n == 0 {
+		return model.Todo{}, ErrNotFound
+	}
+	return d.Get(ctx, id)
 }

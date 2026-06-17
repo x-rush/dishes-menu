@@ -1,4 +1,4 @@
-import type { Dish, WeekMenu, Slot, Day, MenuItem, Todo, Together } from '../types'
+import type { Dish, WeekMenu, Slot, Day, MenuItem, Todo, TodoComment, Together } from '../types'
 
 // 同一个 BASE 兼容 dev / prod:dev 模式 BASE_URL = '/' → 走 Vite proxy 到 :8080;prod 模式 BASE_URL = '/forxt/dishes-menu/' → 拼到所有 /api/... 前面
 const BASE = import.meta.env.DEV ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')
@@ -74,10 +74,16 @@ export const api = {
   listTodos: () => request<Todo[]>('/api/todos'),
   createTodo: (input: { content: string; due_date: string | null; author_emoji: string; author_color: string }) =>
     request<Todo>('/api/todos', { method: 'POST', body: JSON.stringify(input) }),
-  patchTodo: (id: number, body: { content?: string; completed?: boolean }) =>
+  patchTodo: (id: number, body: { content?: string; completed?: boolean; due_date?: string | null; pinned?: boolean }) =>
     request<Todo>(`/api/todos/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteTodo: (id: number) =>
     request<void>(`/api/todos/${id}`, { method: 'DELETE' }),
+
+  // Todo comments
+  listComments: (todoId: number) =>
+    request<TodoComment[]>(`/api/todos/${todoId}/comments`),
+  addComment: (todoId: number, input: { content: string; author_emoji: string; author_color: string }) =>
+    request<TodoComment>(`/api/todos/${todoId}/comments`, { method: 'POST', body: JSON.stringify(input) }),
 
   // Together counter
   getTogether: () => request<Together>('/api/together'),

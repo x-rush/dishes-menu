@@ -1,39 +1,24 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { Todo } from '../types'
 import { useTodoStore } from '../stores/todo'
 import { useUndo } from '../composables/useUndo'
 
 const props = defineProps<{ todo: Todo }>()
+const emit = defineEmits<{ open: [Todo] }>()
 const store = useTodoStore()
 const undo = useUndo()
-const editing = ref(false)
-const editText = ref(props.todo.content)
 const showActions = ref(false)
 let pressTimer: number | null = null
 
-async function toggle() {
+async function toggle(e: Event) {
+  e.stopPropagation()
   await store.toggle(props.todo.id)
   if (!props.todo.completed_at) {
     undo.push(`已勾上「${props.todo.content.slice(0, 12)}」`, async () => {
       await store.toggle(props.todo.id)
     })
   }
-}
-
-function startEdit() {
-  editing.value = true
-  editText.value = props.todo.content
-}
-
-async function saveEdit() {
-  const trimmed = editText.value.trim()
-  if (!trimmed || trimmed === props.todo.content) {
-    editing.value = false
-    return
-  }
-  await store.updateContent(props.todo.id, trimmed)
-  editing.value = false
 }
 
 async function remove() {
@@ -50,7 +35,19 @@ async function remove() {
   })
 }
 
-function onPressStart() {
+async function togglePin() {
+  showActions.value = false
+  const wasPinned = props.todo.pinned
+  await store.togglePin(props.todo.id)
+  undo.push(
+    wasPinned ? `已取消置顶「${props.todo.content.slice(0, 12)}」` : `已置顶「${props.todo.content.slice(0, 12)}」`,
+    async () => { await store.togglePin(props.todo.id) }
+  )
+}
+
+function onPressStart(e: Event) {
+  // 长按只响应触屏/鼠标主键,不响应 .check 等内部按钮
+  if ((e.target as HTMLElement).closest('button')) return
   pressTimer = window.setTimeout(() => {
     showActions.value = true
   }, 520)
@@ -60,6 +57,10 @@ function onPressEnd() {
     clearTimeout(pressTimer)
     pressTimer = null
   }
+}
+
+function openDetail() {
+  emit('open', props.todo)
 }
 
 function formatDue(d: string | null) {
@@ -77,11 +78,23 @@ function relativeTime(iso: string) {
   const d = Math.floor(h / 24)
   return `${d} 天前`
 }
+
+// 已完成 tab 显示完成时间戳,待办 tab 显示创建时间
+const displayTime = computed(() => {
+  const ts = props.todo.completed_at ?? props.todo.created_at
+  return relativeTime(ts)
+})
 </script>
 
 <template>
   <article
-    :class="['todo-card', { done: todo.completed_at, showActions }]"
+    :class="['todo-card', { done: todo.completed_at, showActions, pinned: todo.pinned }]"
+    role="button"
+    tabindex="0"
+    :aria-label="`待办: ${todo.content}`"
+    @click="openDetail"
+    @keydown.enter="openDetail"
+    @keydown.space.prevent="openDetail"
     @touchstart.passive="onPressStart"
     @touchend.passive="onPressEnd"
     @touchcancel.passive="onPressEnd"
@@ -110,18 +123,7 @@ function relativeTime(iso: string) {
     </button>
 
     <div class="body">
-      <div v-if="editing" class="edit-row">
-        <input
-          v-model="editText"
-          maxlength="500"
-          @keydown.enter="saveEdit"
-          @keydown.esc="editing = false"
-        />
-        <button class="btn btn-primary save" @click="saveEdit">保存</button>
-      </div>
-      <div v-else class="content-row">
-        <p class="content" @click="startEdit">{{ todo.content }}</p>
-      </div>
+      <p class="content">{{ todo.content }}</p>
 
       <div class="meta">
         <span
@@ -129,14 +131,20 @@ function relativeTime(iso: string) {
           :style="{ background: todo.author_color }"
           :title="`由 ${todo.author_emoji} 添加`"
         >{{ todo.author_emoji }}</span>
+        <span v-if="todo.pinned" class="pin" title="已置顶">📌</span>
         <span v-if="todo.due_date" class="due">📅 {{ formatDue(todo.due_date) }}</span>
-        <span class="time">{{ relativeTime(todo.created_at) }}</span>
+        <span class="time">
+          {{ todo.completed_at ? '✓ ' : '' }}{{ displayTime }}
+        </span>
       </div>
     </div>
 
     <Transition name="actions">
-      <div v-if="showActions" class="action-overlay" @click="showActions = false">
-        <button class="action-btn danger" @click.stop="remove">删除这条</button>
+      <div v-if="showActions" class="action-overlay" @click.stop="showActions = false">
+        <button class="action-btn primary" @click.stop="togglePin">
+          {{ todo.pinned ? '↩️ 取消置顶' : '📌 置顶' }}
+        </button>
+        <button class="action-btn danger" @click.stop="remove">🗑️ 删除</button>
         <button class="action-btn ghost" @click.stop="showActions = false">取消</button>
       </div>
     </Transition>
@@ -158,8 +166,14 @@ function relativeTime(iso: string) {
     transform 0.2s var(--ease-spring),
     box-shadow 0.25s var(--ease-out-soft);
   overflow: hidden;
+  cursor: pointer;
 }
+.todo-card:hover { box-shadow: var(--shadow-md); }
 .todo-card:active { transform: scale(0.99); }
+.todo-card:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-md), 0 0 0 3px rgba(248, 165, 194, 0.45);
+}
 :root[data-theme="dark"] .todo-card {
   background: linear-gradient(135deg, #2d2226 0%, #3a2830 100%);
 }
@@ -173,6 +187,12 @@ function relativeTime(iso: string) {
   width: 3px;
   background: var(--color-pink-300);
   opacity: 0.5;
+}
+.todo-card.pinned {
+  background: linear-gradient(135deg, #fffaf0 0%, #fff4d4 100%);
+}
+:root[data-theme="dark"] .todo-card.pinned {
+  background: linear-gradient(135deg, #4a4028 0%, #3a3020 100%);
 }
 .todo-card.done {
   background: var(--color-warm-bg);
@@ -222,18 +242,18 @@ function relativeTime(iso: string) {
 .todo-card.done .check-path { stroke-dashoffset: 0; }
 
 .body { flex: 1 1 auto; min-width: 0; }
-.content-row { display: flex; gap: 8px; align-items: center; }
 .content {
   font-size: 15px;
   line-height: 1.55;
   word-break: break-word;
-  cursor: text;
+  cursor: pointer;
   margin: 0;
   color: var(--color-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-.edit-row { display: flex; gap: 6px; }
-.edit-row input { flex: 1 1 auto; font-size: 14px; padding: 6px 10px; }
-.save { padding: 4px 12px; font-size: 12px; }
 
 .meta {
   display: flex;
@@ -254,6 +274,10 @@ function relativeTime(iso: string) {
   font-size: 13px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.06), inset 0 -1px 2px rgba(0,0,0,0.08);
   flex: 0 0 auto;
+}
+.pin {
+  font-size: 12px;
+  line-height: 1;
 }
 .due {
   color: var(--color-peach-300);
@@ -292,6 +316,15 @@ function relativeTime(iso: string) {
   background: linear-gradient(135deg, #ffa0a0, var(--color-danger));
   color: #fff;
   box-shadow: 0 4px 12px rgba(226, 109, 109, 0.35);
+}
+.action-btn.primary {
+  background: linear-gradient(135deg, #fff4d4, #ffe69e);
+  color: #8a6a1a;
+  box-shadow: 0 4px 12px rgba(247, 213, 96, 0.35);
+}
+:root[data-theme="dark"] .action-btn.primary {
+  background: linear-gradient(135deg, #5a4a28, #6a5430);
+  color: #f7d560;
 }
 .action-btn.ghost {
   background: var(--color-pink-50);
