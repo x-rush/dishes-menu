@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useTodoStore } from '../stores/todo'
 import { useUndo } from '../composables/useUndo'
+import { usePullToRefresh } from '../composables/usePullToRefresh'
 import TodoInputBar from '../components/TodoInputBar.vue'
 import TodoCard from '../components/TodoCard.vue'
 import TodoDetailModal from '../components/TodoDetailModal.vue'
@@ -10,9 +11,18 @@ import type { Todo } from '../types'
 
 const store = useTodoStore()
 const undo = useUndo()
+const pageRef = ref<HTMLElement | null>(null)
 
 onMounted(() => {
   store.fetchAll()
+})
+
+// 下拉刷新:拉一次最新待办(没有"跳回今天"逻辑,所有待办平铺)
+const { pulling, pullDistance, refreshing: pullRefreshing } = usePullToRefresh({
+  target: pageRef,
+  onRefresh: async () => {
+    await store.fetchAll()
+  },
 })
 
 // —— Tab + 搜索 ——
@@ -191,7 +201,18 @@ const allDone = computed(() => activeTab.value === 'open' && openCount.value ===
 </script>
 
 <template>
-  <div class="todo-page">
+  <div ref="pageRef" class="todo-page">
+    <!-- 下拉刷新指示器 -->
+    <div
+      class="pull-indicator"
+      :class="{ active: pulling, refreshing: pullRefreshing }"
+      :style="{ transform: `translateY(${pullDistance - 56}px)` }"
+      aria-hidden="true"
+    >
+      <span class="pull-icon">⟳</span>
+      <span class="pull-text">{{ pullRefreshing ? '刷新中…' : '下拉刷新' }}</span>
+    </div>
+
     <header class="page-head">
       <div class="hero">
         <h1>💝 想做的小事</h1>
@@ -428,12 +449,52 @@ const allDone = computed(() => activeTab.value === 'open' && openCount.value ===
 
 <style scoped>
 .todo-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 18px;
   padding: 20px 18px 32px;
   max-width: 560px;
   margin: 0 auto;
+}
+
+/* —— 下拉刷新指示器 —— */
+.pull-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  pointer-events: none;
+  transform: translateY(-56px);
+  transition: transform 0.32s var(--ease-spring);
+  z-index: 1;
+}
+.pull-indicator.active {
+  transition: none;
+}
+.pull-indicator.refreshing .pull-icon {
+  animation: pull-spin 0.8s linear infinite;
+}
+.pull-icon {
+  display: inline-block;
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.2s var(--ease-spring);
+}
+.pull-indicator.active .pull-icon {
+  transform: rotate(180deg);
+}
+@keyframes pull-spin {
+  to { transform: rotate(360deg); }
 }
 
 .page-head {
