@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Local: set VITE_BASE_PATH=/ in .env so SPA hits Gin at root.
+        # Prod (deploy.sh): .env is not shipped → falls back to /forxt/.
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/forxt/dishes-menu/}
     image: dishes-menu:latest
     container_name: dishes-menu
     restart: unless-stopped

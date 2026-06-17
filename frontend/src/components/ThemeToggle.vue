@@ -23,8 +23,9 @@ function onToggle() { toggle() }
 <style scoped>
 .theme-toggle {
   position: fixed;
+  /* 上移到 TabBar 之上(TabBar 高 68px + 12px 间距),不再挡菜单/待办 tab */
   left: max(16px, env(safe-area-inset-left));
-  bottom: max(20px, env(safe-area-inset-bottom));
+  bottom: calc(68px + env(safe-area-inset-bottom) + 12px);
   width: 44px;
   height: 44px;
   border-radius: 50%;

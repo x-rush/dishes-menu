@@ -3,6 +3,13 @@
 # ─────────────────────────────────────────────────────────
 FROM node:22-alpine AS web
 
+# Allow docker-compose / deploy.sh to bake the right basePath without
+# touching the source tree. Default matches production deploy (/forxt/...).
+# For local `docker compose up`, set VITE_BASE_PATH=/ in .env so the bundled
+# SPA talks to the Gin server at root instead of behind nginx prefix.
+ARG VITE_BASE_PATH=/forxt/dishes-menu/
+ENV VITE_BASE_PATH=$VITE_BASE_PATH
+
 # Match local dev CWD (`npm run dev` is run from frontend/) so vite's relative
 # outDir `../backend/web/dist` lands at /app/backend/web/dist — a sibling of
 # the go-build stage's WORKDIR /app, keeping cross-stage COPY paths symmetric.

@@ -267,7 +267,8 @@ p {
 .fab {
   position: fixed;
   right: max(16px, env(safe-area-inset-right));
-  bottom: max(20px, env(safe-area-inset-bottom));
+  /* 上移到 TabBar 之上(TabBar 高 68px + 12px 间距),不再挡菜单 tab */
+  bottom: calc(68px + env(safe-area-inset-bottom) + 12px);
   width: 60px;
   height: 60px;
   border-radius: 50%;
