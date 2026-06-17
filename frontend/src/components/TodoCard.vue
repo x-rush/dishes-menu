@@ -35,6 +35,16 @@ async function remove() {
   })
 }
 
+async function togglePin() {
+  showActions.value = false
+  const wasPinned = props.todo.pinned
+  await store.togglePin(props.todo.id)
+  undo.push(
+    wasPinned ? `已取消置顶「${props.todo.content.slice(0, 12)}」` : `已置顶「${props.todo.content.slice(0, 12)}」`,
+    async () => { await store.togglePin(props.todo.id) }
+  )
+}
+
 function onPressStart(e: Event) {
   // 长按只响应触屏/鼠标主键,不响应 .check 等内部按钮
   if ((e.target as HTMLElement).closest('button')) return
@@ -131,7 +141,10 @@ const displayTime = computed(() => {
 
     <Transition name="actions">
       <div v-if="showActions" class="action-overlay" @click.stop="showActions = false">
-        <button class="action-btn danger" @click.stop="remove">删除这条</button>
+        <button class="action-btn primary" @click.stop="togglePin">
+          {{ todo.pinned ? '↩️ 取消置顶' : '📌 置顶' }}
+        </button>
+        <button class="action-btn danger" @click.stop="remove">🗑️ 删除</button>
         <button class="action-btn ghost" @click.stop="showActions = false">取消</button>
       </div>
     </Transition>
@@ -303,6 +316,15 @@ const displayTime = computed(() => {
   background: linear-gradient(135deg, #ffa0a0, var(--color-danger));
   color: #fff;
   box-shadow: 0 4px 12px rgba(226, 109, 109, 0.35);
+}
+.action-btn.primary {
+  background: linear-gradient(135deg, #fff4d4, #ffe69e);
+  color: #8a6a1a;
+  box-shadow: 0 4px 12px rgba(247, 213, 96, 0.35);
+}
+:root[data-theme="dark"] .action-btn.primary {
+  background: linear-gradient(135deg, #5a4a28, #6a5430);
+  color: #f7d560;
 }
 .action-btn.ghost {
   background: var(--color-pink-50);

@@ -19,6 +19,7 @@ type Handlers struct {
 	Dish     *DishHandler
 	Menu     *MenuHandler
 	Todo     *TodoHandler
+	TodoComm *TodoCommentHandler
 	Together *TogetherHandler
 }
 
@@ -26,6 +27,7 @@ func NewHandlers(db *sqlx.DB) *Handlers {
 	dishRepo := dao.NewDishRepo(db)
 	menuRepo := dao.NewMenuRepo(db)
 	todoRepo := dao.NewTodoDAO(db)
+	todoCommentRepo := dao.NewTodoCommentDAO(db)
 	counterRepo := dao.NewCounterDAO(db)
 	shuffle := service.NewShuffleService(dishRepo, menuRepo)
 	return &Handlers{
@@ -33,6 +35,7 @@ func NewHandlers(db *sqlx.DB) *Handlers {
 		Dish:     NewDishHandler(dishRepo),
 		Menu:     NewMenuHandler(menuRepo, dishRepo, shuffle),
 		Todo:     NewTodoHandler(todoRepo),
+		TodoComm: NewTodoCommentHandler(todoCommentRepo, todoRepo),
 		Together: NewTogetherHandler(counterRepo),
 	}
 }
@@ -62,6 +65,10 @@ func RegisterRoutes(r *gin.Engine, h *Handlers, webFS fs.FS) {
 		api.POST("/todos", h.Todo.Create)
 		api.PATCH("/todos/:id", h.Todo.Patch)
 		api.DELETE("/todos/:id", h.Todo.Delete)
+
+		// ── Todo comments ──
+		api.GET("/todos/:id/comments", h.TodoComm.List)
+		api.POST("/todos/:id/comments", h.TodoComm.Create)
 
 		// ── Together counter ──
 		api.GET("/together", h.Together.Get)

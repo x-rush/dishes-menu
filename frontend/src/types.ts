@@ -69,9 +69,18 @@ export interface Todo {
   due_date: string | null  // YYYY-MM-DD 或 null
   author_emoji: string
   author_color: string
+  pinned: boolean           // P2 后端加列,List/Get 都返回
   created_at: string        // ISO 8601
   completed_at: string | null
-  pinned?: boolean          // P1 时永远 falsy(后端尚未支持),P2 后端加列后启用
+}
+
+export interface TodoComment {
+  id: number
+  todo_id: number
+  content: string
+  author_emoji: string
+  author_color: string
+  created_at: string        // ISO 8601
 }
 
 export interface Together {

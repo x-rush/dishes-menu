@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useTodoStore } from '../stores/todo'
 import { useUndo } from '../composables/useUndo'
 import TodoInputBar from '../components/TodoInputBar.vue'
@@ -69,6 +69,20 @@ const detailTodoId = ref<number | null>(null)
 const detailTodo = computed(() =>
   detailTodoId.value == null ? null : store.todos.find(t => t.id === detailTodoId.value) ?? null
 )
+
+// —— 加载更多(P3) ——
+// 一次只渲染前 PAGE_SIZE 条;切换 tab / 改筛选 / 改搜索时重置
+const PAGE_SIZE = 50
+const visibleCount = ref(PAGE_SIZE)
+const visibleList = computed(() => filteredList.value.slice(0, visibleCount.value))
+const hasMore = computed(() => filteredList.value.length > visibleCount.value)
+function loadMore() {
+  visibleCount.value = Math.min(visibleCount.value + PAGE_SIZE, filteredList.value.length)
+}
+// 切 tab / 改筛选 / 改搜索时把 visibleCount 重置回 PAGE_SIZE
+watch([activeTab, filterEmoji, filterRange, searchQuery], () => {
+  visibleCount.value = PAGE_SIZE
+})
 function openDetail(t: Todo) {
   detailTodoId.value = t.id
 }
@@ -102,12 +116,16 @@ async function onModalRemove(t: Todo) {
 }
 
 // —— 派生列表 ——
-// 已完成按完成时间倒序;待办按 due_date 优先 + 创建时间倒序(+ P2 时 pinned 优先)
+// 已完成按完成时间倒序;待办按 pinned → due_date → created_at 排
 const sortedOpen = computed(() =>
   [...store.open].sort((a, b) => {
+    // 1. 置顶优先
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+    // 2. due_date 优先(无 due 的排后)
     if (a.due_date && !b.due_date) return -1
     if (!a.due_date && b.due_date) return 1
     if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date)
+    // 3. created_at 倒序
     return b.created_at.localeCompare(a.created_at)
   })
 )
@@ -347,13 +365,23 @@ const allDone = computed(() => activeTab.value === 'open' && openCount.value ===
     <Transition name="fade-up" mode="out-in">
       <section :key="activeTab" class="list-section">
         <!-- 列表非空 -->
-        <div v-if="filteredList.length" class="todo-list">
+        <div v-if="visibleList.length" class="todo-list">
           <TodoCard
-            v-for="t in filteredList"
+            v-for="t in visibleList"
             :key="t.id"
             :todo="t"
             @open="openDetail"
           />
+
+          <!-- 加载更多(P3) -->
+          <button
+            v-if="hasMore"
+            type="button"
+            class="load-more"
+            @click="loadMore"
+          >
+            再加载 {{ Math.min(PAGE_SIZE, filteredList.length - visibleCount) }} 条 · 剩 {{ filteredList.length - visibleCount }} 条
+          </button>
         </div>
 
         <!-- 搜索无匹配 -->
@@ -735,6 +763,29 @@ const allDone = computed(() => activeTab.value === 'open' && openCount.value ===
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.load-more {
+  align-self: center;
+  margin-top: 6px;
+  padding: 8px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-pink-500);
+  background: var(--color-pink-50);
+  border-radius: var(--radius-pill);
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  min-height: 0;
+  min-width: 0;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s var(--ease-spring);
+}
+.load-more:hover {
+  background: var(--color-pink-100);
+  border-color: var(--color-pink-300);
+}
+.load-more:active { transform: scale(0.97); }
+:root[data-theme="dark"] .load-more {
+  background: var(--color-pink-100);
 }
 .fade-up-enter-active, .fade-up-leave-active {
   transition: opacity 0.2s ease, transform 0.2s var(--ease-spring);
