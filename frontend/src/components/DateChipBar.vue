@@ -5,6 +5,7 @@ const props = defineProps<{ modelValue: string | null }>()
 const emit = defineEmits<{ 'update:modelValue': [string | null] }>()
 
 const rootRef = ref<HTMLElement | null>(null)
+const popoverRef = ref<HTMLElement | null>(null)
 const popoverOpen = ref(false)
 
 const today = new Date()
@@ -113,10 +114,10 @@ function togglePopover() {
 }
 
 function onDocClick(e: MouseEvent) {
-  if (!rootRef.value) return
-  if (!rootRef.value.contains(e.target as Node)) {
-    popoverOpen.value = false
-  }
+  const target = e.target as Node
+  if (rootRef.value?.contains(target)) return
+  if (popoverRef.value?.contains(target)) return
+  popoverOpen.value = false
 }
 
 onMounted(() => {
@@ -146,8 +147,15 @@ onBeforeUnmount(() => {
       @click.stop="clear"
     >清除</button>
 
-    <Transition name="popover">
-      <div v-if="popoverOpen" class="popover" role="dialog" aria-label="选择日期">
+    <Teleport to="body">
+      <Transition name="popover">
+        <div
+          ref="popoverRef"
+          v-if="popoverOpen"
+          class="popover"
+          role="dialog"
+          aria-label="选择日期"
+        >
         <div class="cal-head">
           <button type="button" class="nav" @click="prevMonth" aria-label="上个月">‹</button>
           <span class="cal-title">{{ monthLabel }}</span>
@@ -175,8 +183,9 @@ onBeforeUnmount(() => {
           <button type="button" class="link" @click="goToday">今天</button>
           <button v-if="props.modelValue" type="button" class="link danger" @click="clear">清除</button>
         </div>
-      </div>
-    </Transition>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -239,15 +248,17 @@ onBeforeUnmount(() => {
 .chip.clear:hover { background: var(--color-pink-50); }
 
 .popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 80;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10000;
   background: #fff;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: 14px;
   min-width: 286px;
+  max-width: calc(100vw - 24px);
   border: 1px solid var(--color-line);
 }
 :root[data-theme="dark"] .popover {
@@ -363,10 +374,9 @@ onBeforeUnmount(() => {
 
 .popover-enter-active, .popover-leave-active {
   transition: opacity 0.18s ease, transform 0.22s var(--ease-spring);
-  transform-origin: top left;
 }
 .popover-enter-from, .popover-leave-to {
   opacity: 0;
-  transform: scale(0.95) translateY(-4px);
+  transform: translate(-50%, -50%) scale(0.95);
 }
 </style>

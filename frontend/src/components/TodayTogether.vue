@@ -55,7 +55,7 @@ const phrases = [
   '🌸 想你想到心都软了',
   '☀️ 想到你就会笑',
   '🍚 一起吃饭的日子最暖',
-  '✨ 永远最喜欢你',
+  '✨ 永远最爱你',
 ]
 const currentIdx = ref(0)
 let phraseTimer: number | null = null

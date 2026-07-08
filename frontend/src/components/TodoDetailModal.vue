@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import type { Todo } from '../types'
 import { useTodoStore } from '../stores/todo'
 import DateChipBar from './DateChipBar.vue'
@@ -12,7 +12,13 @@ const emit = defineEmits<{
 }>()
 
 const store = useTodoStore()
-const dialogRef = ref<HTMLDialogElement | null>(null)
+const open = ref(false)
+
+function onEsc(e: KeyboardEvent) {
+  if (e.key === 'Escape' && open.value) close()
+}
+onMounted(() => document.addEventListener('keydown', onEsc))
+onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 
 // 视图 / 编辑模式
 const mode = ref<'view' | 'edit'>('view')
@@ -60,21 +66,21 @@ watch(
         // 拉取评论(后端不返回评论内嵌,按需拉)
         store.fetchComments(t.id).catch(() => { /* 静默 */ })
       }
-      dialogRef.value?.showModal()
+      open.value = true
     } else {
-      dialogRef.value?.close()
+      open.value = false
     }
   }
 )
 
 function close() {
-  dialogRef.value?.close()
+  open.value = false
   emit('close')
 }
 
-// 点击 backdrop 关闭(target === dialogRef 本身)
+// 点击 backdrop 关闭
 function onBackdropClick(e: MouseEvent) {
-  if (e.target === dialogRef.value) close()
+  if ((e.target as HTMLElement).dataset.backdrop) close()
 }
 
 // 元信息格式化
@@ -191,7 +197,9 @@ function commentRelative(iso: string) {
 </script>
 
 <template>
-  <dialog ref="dialogRef" @close="emit('close')" @click="onBackdropClick">
+  <Teleport to="body">
+  <div v-if="open" class="modal-overlay" data-backdrop @click="onBackdropClick">
+    <div class="modal-card" @click.stop>
     <div v-if="todo" class="dlg-body" :data-mode="mode">
       <header class="dlg-head">
         <div class="author">
@@ -302,15 +310,40 @@ function commentRelative(iso: string) {
         >{{ saving ? '保存中…' : '保存' }}</button>
       </footer>
     </div>
-  </dialog>
+    </div>
+  </div>
+  </Teleport>
 </template>
 
 <style scoped>
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(58, 46, 54, 0.45);
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease;
+}
+.modal-card {
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 0;
+  background: var(--color-warm-bg);
+  color: var(--color-ink);
+  max-width: min(420px, calc(100vw - 32px));
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  animation: pop 0.28s var(--ease-spring);
+  max-height: 90vh;
+  overflow-y: auto;
+}
 .dlg-body {
   padding: 18px 20px 16px;
   min-width: min(360px, 90vw);
   max-width: 480px;
-  max-height: 80vh;
   display: flex;
   flex-direction: column;
   gap: 14px;
