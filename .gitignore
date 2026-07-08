@@ -55,4 +55,4 @@ deploy.sh
 .playwright-mcp/
 # Root-level screenshots (E2E 临时抓图)
 /*.png
-
+.qoder
